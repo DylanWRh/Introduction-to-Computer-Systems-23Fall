@@ -1,0 +1,80 @@
+# Name: 
+# ID: 
+
+# Execution begins at address 0 
+	.pos 0
+	irmovq  stack, %rsp  	# Set up stack pointer
+	call    main		    # Execute main program
+	halt			        # Terminate program 
+
+.align 8
+Array:
+    .quad   0xbca
+    .quad   0xcba
+    .quad   0xacb
+    .quad   0xcab
+    .quad   0xabc
+    .quad   0xbac
+
+main:
+    irmovq  Array, %rdi
+    irmovq  $6, %rsi
+    call    bubble_sort     # bubble_sort(Array, 6)
+    ret
+
+# bubble_sort(long *data, long count)
+# data in %rdi, count in %rsi
+bubble_sort:
+    # Step 1: calculate last = data + count - 1
+    rrmovq  %rdi, %r8       # last in %r8 
+    addq    %rsi, %rsi 
+    addq    %rsi, %rsi 
+    addq    %rsi, %rsi      # count * 8 in %rsi
+    irmovq  $8, %r9         # constant 8 in %r9
+    subq    %r9, %rsi       # (count - 1) * 8 in %rsi 
+    addq    %rsi, %r8        # last = data + count - 1 in %r8
+
+# Step 2: build outside loop
+outside_loop_starts_here_meow:
+    # Step 2.1: judge whether to exit loop
+    rrmovq  %r8, %r13 
+    subq    %rdi, %r13      # last <= data, stop loop
+    jle     outside_loop_ends_here_meow
+
+    # Step 2.2: start inside loop
+    rrmovq  %rdi, %r10      # i = data in %r10
+
+# Step 3: build inside loop
+inside_loop_starts_here_meow:
+    # Step 3.1: judge whether to exit loop
+    rrmovq  %r10, %r13 
+    subq    %r8, %r13       # i >= last, stop loop 
+    jge     inside_loop_ends_here_meow
+
+    # Step 3.2: judge whether to exchange items
+    mrmovq  (%r10), %r11    # *i in %r11
+    mrmovq  8(%r10), %r12   # *(i + 1) in %r12 
+    rrmovq  %r12, %r13      # tmp *(i + 1) in %r13
+    subq   %r11, %r13      # *i <= *(i + 1), nothing happens
+    jge     do_not_exchange_them_meow
+
+    # Step 3.3: exchange two elements
+    rmmovq  %r11, 8(%r10)
+    rmmovq  %r12, (%r10)
+
+do_not_exchange_them_meow:
+    # Step 3.4: i++
+    addq    %r9, %r10
+    jmp     inside_loop_starts_here_meow
+
+inside_loop_ends_here_meow:
+    # Step 2.3: last--
+    subq    %r9, %r8 
+    jmp     outside_loop_starts_here_meow
+
+outside_loop_ends_here_meow:
+    ret
+
+# Stack starts here and grows to lower addresses
+	.pos 0x200
+stack:

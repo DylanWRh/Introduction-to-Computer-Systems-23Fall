@@ -1,0 +1,186 @@
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len words to dst.
+# Return the number of positive words (>0) contained in src.
+#
+# Include your name and ID here.
+# Name: 
+# ID: 
+#
+# Describe how and why you modified the baseline code.
+#   1. Add IIADDQ instruction in pipe-full.hcl
+#   2. Use iaddq in ncopy.ys
+#   3. Use loop unrolling, deal with 9 elements in one loop
+#   4. Split reading and saving to avoid data hazard
+#   5. Use multiple registers to avoid hazrad
+#   6. Use binary search to locate PC when the number of rest elements <= 9
+##################################################################
+# Do not modify this portion
+# Function prologue.
+# %rdi = src, %rsi = dst, %rdx = len
+ncopy:
+
+##################################################################
+# You can modify this portion
+    # Loop header
+    # xorq    %rax, %rax
+
+# if length <= 9, goto binary search
+    iaddq   $-9, %rdx 
+    jl      compare_length_with_4_meow
+
+# operate on 9 numbers in one loop
+read_9_number_meow:
+    mrmovq  0(%rdi), %r8
+    mrmovq  8(%rdi), %r9
+    mrmovq  16(%rdi), %r10
+    mrmovq  24(%rdi), %r11
+    mrmovq  32(%rdi), %r12
+    mrmovq  40(%rdi), %r13
+    mrmovq  48(%rdi), %r14
+    mrmovq  56(%rdi), %rcx
+    mrmovq  64(%rdi), %rbx
+count_positive_1_neow:
+    andq    %r8, %r8
+    jle     count_positive_2_neow
+    iaddq   $1, %rax
+count_positive_2_neow:
+    andq    %r9, %r9
+    jle     count_positive_3_neow
+    iaddq   $1, %rax
+count_positive_3_neow:
+    andq    %r10, %r10
+    jle     count_positive_4_neow
+    iaddq   $1, %rax
+count_positive_4_neow:
+    andq    %r11, %r11
+    jle     count_positive_5_neow
+    iaddq   $1, %rax
+count_positive_5_neow:
+    andq    %r12, %r12
+    jle     count_positive_6_neow
+    iaddq   $1, %rax
+count_positive_6_neow:
+    andq    %r13, %r13
+    jle     count_positive_7_neow
+    iaddq   $1, %rax
+count_positive_7_neow:
+    andq    %r14, %r14
+    jle     count_positive_8_neow
+    iaddq   $1, %rax
+count_positive_8_neow:
+    andq    %rcx, %rcx
+    jle     count_positive_9_neow
+    iaddq   $1, %rax
+count_positive_9_neow:
+    andq    %rbx, %rbx
+    jle     save_9_number_meow
+    iaddq   $1, %rax
+save_9_number_meow:
+    rmmovq  %r8, 0(%rsi)
+    rmmovq  %r9, 8(%rsi)
+    rmmovq  %r10, 16(%rsi)
+    rmmovq  %r11, 24(%rsi)
+    rmmovq  %r12, 32(%rsi)
+    rmmovq  %r13, 40(%rsi)
+    rmmovq  %r14, 48(%rsi)
+    rmmovq  %rcx, 56(%rsi)
+    rmmovq  %rbx, 64(%rsi)
+one_loop_ends_meow:
+    iaddq   $72, %rdi
+    iaddq   $72, %rsi
+    iaddq   $-9, %rdx
+    # length >= 9, do the loop again
+    jge     read_9_number_meow
+
+# binary search
+compare_length_with_4_meow:
+    iaddq   $5, %rdx        # length 0~8, %rdx -9~0 -> -4~4
+    jl      compare_length_with_1_meow
+    jg      compare_length_with_6_meow
+    je      deal_with_length_4_meow_preparation
+compare_length_with_6_meow:
+    iaddq   $-2, %rdx        # length 5~8, %rdx 1~4 -> -1~2
+    jg      compare_length_with_8_meow
+    jl      deal_with_length_5_meow_preparation
+    je      deal_with_length_6_meow_preparation
+compare_length_with_8_meow:
+    iaddq   $-2, %rdx        # length 7~8, %rdx 1~2 -> -1~0
+    je      deal_with_length_8_meow_preparation
+    jl      deal_with_length_7_meow_preparation
+compare_length_with_1_meow:
+    iaddq   $3, %rdx        # length 0~3, %rdx -4~-1 -> -1~2
+    jg      compare_length_with_3_meow
+    je      deal_with_length_1_meow_preparation
+    jl     Done
+compare_length_with_3_meow:
+    iaddq   $-2, %rdx        # length 2~3, %rdx 1~2 -> -1~0
+    jl      deal_with_length_2_meow_preparation
+    je      deal_with_length_3_meow_preparation
+
+# deal with length <= 9
+deal_with_length_8_meow_preparation:
+    mrmovq  $56(%rdi), %rbx
+    rmmovq  %rbx, $56(%rsi)
+    andq    %rbx, %rbx
+deal_with_length_7_meow_preparation:
+    mrmovq  48(%rdi), %r14
+    jle     deal_with_length_7_meow
+    iaddq   $1, %rax
+deal_with_length_7_meow:
+    rmmovq  %r14, 48(%rsi)
+    andq    %r14, %r14
+deal_with_length_6_meow_preparation:
+    mrmovq  40(%rdi), %r13
+    jle     deal_with_length_6_meow
+    iaddq   $1, %rax
+deal_with_length_6_meow:
+    rmmovq  %r13, 40(%rsi)
+    andq    %r13, %r13
+deal_with_length_5_meow_preparation:
+    mrmovq  32(%rdi), %r12
+    jle     deal_with_length_5_meow
+    iaddq   $1, %rax
+deal_with_length_5_meow:
+    rmmovq  %r12, 32(%rsi)
+    andq    %r12, %r12
+deal_with_length_4_meow_preparation:
+    mrmovq  24(%rdi), %r11
+    jle     deal_with_length_4_meow
+    iaddq   $1, %rax
+deal_with_length_4_meow:
+    rmmovq  %r11, 24(%rsi)
+    andq    %r11, %r11
+deal_with_length_3_meow_preparation:
+    mrmovq  16(%rdi), %r10
+    jle     deal_with_length_3_meow
+    iaddq   $1, %rax
+deal_with_length_3_meow:
+    rmmovq  %r10, 16(%rsi)
+    andq    %r10, %r10
+deal_with_length_2_meow_preparation:
+    mrmovq  8(%rdi), %r9
+    jle     deal_with_length_2_meow
+    iaddq   $1, %rax
+deal_with_length_2_meow:
+    rmmovq  %r9, 8(%rsi)
+    andq    %r9, %r9
+deal_with_length_1_meow_preparation:
+    mrmovq  0(%rdi), %r8
+    jle     deal_with_length_1_meow
+    iaddq   $1, %rax
+deal_with_length_1_meow:
+    rmmovq  %r8, 0(%rsi)
+    andq    %r8, %r8
+    jle Done
+    iaddq $1, %rax
+
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+	ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */
